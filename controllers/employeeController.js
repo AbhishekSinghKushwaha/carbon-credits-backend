@@ -15,7 +15,6 @@ export const registerEmployee = async (req, res) => {
 
 export const getEmployee = async (req, res) => {
   const { id } = req.params;
-  console.log(id, "DDDD");
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: 'Invalid employee ID format' });
