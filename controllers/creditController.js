@@ -9,7 +9,8 @@ export const submitCredit = async (req, res) => {
     const employee = await Employee.findById(employeeId);
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
-    const employer = await Employer.findById(employee.employerId);
+    // Look up employer using employerUserName
+    const employer = await Employer.findOne({ userName: employee.employerUserName });
     if (!employer) return res.status(404).json({ error: 'Employer not found' });
 
     // Calculate points based on method
@@ -18,7 +19,7 @@ export const submitCredit = async (req, res) => {
 
     const credit = new Credit({
       employeeId,
-      employerId: employee.employerId,
+      employerId: employer._id, // Still store employerId in Credit for reference
       milesSaved,
       method,
       points,

@@ -1,29 +1,110 @@
 import Employee from '../models/Employee.js';
+import Employer from '../models/Employer.js';
 import mongoose from 'mongoose';
+import bcrypt from 'bcrypt';
+
+// Number of salt rounds for bcrypt hashing
+const SALT_ROUNDS = 10;
 
 export const registerEmployee = async (req, res) => {
-  const { name, employerId, homeLocation, workLocation } = req?.body;
+  const { name, userName, email, password, employerUserName, homeLocation, workLocation } = req?.body;
+
+  // Validate request body
+  if (!name || !userName || !email || !password || !employerUserName || !homeLocation || !workLocation) {
+    return res.status(400).json({ error: 'All fields are required' });
+  }
 
   try {
-    const employee = new Employee({ name, employerId, homeLocation, workLocation });
+    // Check if userName already exists
+    const existingEmployee = await Employee.findOne({ userName });
+    if (existingEmployee) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    // Check if email already exists
+    const existingEmail = await Employee.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+
+    // Check if employerUserName exists in Employer collection
+    const employer = await Employer.findOne({ userName: employerUserName });
+    if (!employer) {
+      return res.status(404).json({ error: 'Employer not found' });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+    // Create new employee with employerUserName
+    const employee = new Employee({
+      name,
+      userName,
+      email,
+      password: hashedPassword,
+      employerUserName, // Store the employer's userName
+      homeLocation,
+      workLocation,
+    });
+
+    // Save the employee to the database
     await employee.save();
+
     res.status(201).json({ message: 'Employee registered', employee });
   } catch (error) {
+    // Handle duplicate key errors from MongoDB (e.g., if unique constraint fails)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(400).json({ error: `${field} already exists` });
+    }
     res.status(400).json({ error: error.message });
   }
 };
 
 export const getEmployee = async (req, res) => {
-  const { id } = req.params;
+  const { userName } = req.params;
 
+  try {
+    const employee = await Employee.findOne({userName: userName});
+    if (!employee) return res.status(404).json({ error: 'Employee not found' });
+
+    // Look up the employer using employerUserName
+    const employer = await Employer.findOne({ userName: employee.employerUserName });
+    if (!employer) return res.status(404).json({ error: 'Employer not found' });
+
+    // Attach employer details to the response
+    const employeeWithEmployer = {
+      ...employee.toObject(),
+      employer: { name: employer.name, userName: employer.userName },
+    };
+
+    res.json(employeeWithEmployer);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const getEmployeebyId = async (req, res) => {
+  const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ error: 'Invalid employee ID format' });
   }
 
   try {
-    const employee = await Employee.findById(id).populate('employerId', 'name');
+    const employee = await Employee.findById(id).populate('employerUserName', 'name');
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
-    res.json(employee);
+
+    // Look up the employer using employerUserName
+    const employer = await Employer.findOne({ userName: employee.employerUserName });
+    if (!employer) return res.status(404).json({ error: 'Employer not found' });
+
+    // Attach employer details to the response
+    const employeeWithEmployer = {
+      ...employee.toObject(),
+      employer: { name: employer.name, userName: employer.userName },
+    };
+
+    res.json(employeeWithEmployer);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
