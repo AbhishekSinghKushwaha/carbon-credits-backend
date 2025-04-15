@@ -1,6 +1,7 @@
 import Employer from '../models/Employer.js';
 import Employee from '../models/Employee.js';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Number of salt rounds for bcrypt hashing
 const SALT_ROUNDS = 10;
@@ -42,6 +43,40 @@ export const registerEmployer = async (req, res) => {
       const field = Object.keys(error.keyValue)[0];
       return res.status(400).json({ error: `${field} already exists` });
     }
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const loginEmployer = async (req, res) => {
+  const { userName, password } = req.body;
+
+  if (!userName || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  try {
+    const employer = await Employer.findOne({ userName });
+    if (!employer) {
+      return res.status(404).json({ error: 'Employer not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, employer.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    const token = jwt.sign(
+      { id: employer._id, userName: employer.userName, role: 'employer' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      message: 'Employer login successful',
+      token,
+      user: { id: employer._id, userName: employer.userName, role: 'employer' },
+    });
+  } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
@@ -143,8 +178,20 @@ export const tradeCredits = async (req, res) => {
 
 export const getAllEmployers = async (req, res) => {
   try {
-    const employers = await Employer.find({}, 'userName name'); // Only return userName and name
+    const employers = await Employer.find({}, 'userName name bankApproved'); // Only return userName and name
     res.json(employers);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const validateEmployerToken = async (req, res) => {
+  try {
+    const user = await Employer.findOne({ userName: req.user.userName });
+    if (!user) {
+      return res.status(404).json({ error: 'Employer not found' });
+    }
+    res.json({ user: { id: user._id, userName: user.userName, role: 'employer' } });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

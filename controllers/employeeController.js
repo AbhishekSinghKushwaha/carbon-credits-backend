@@ -2,6 +2,7 @@ import Employee from '../models/Employee.js';
 import Employer from '../models/Employer.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 // Number of salt rounds for bcrypt hashing
 const SALT_ROUNDS = 10;
@@ -57,6 +58,40 @@ export const registerEmployee = async (req, res) => {
       const field = Object.keys(error.keyValue)[0];
       return res.status(400).json({ error: `${field} already exists` });
     }
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const loginEmployee = async (req, res) => {
+  const { userName, password } = req.body;
+
+  if (!userName || !password) {
+    return res.status(400).json({ error: 'Username and password are required' });
+  }
+
+  try {
+    const employee = await Employee.findOne({ userName });
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    const isMatch = await bcrypt.compare(password, employee.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid password' });
+    }
+
+    const token = jwt.sign(
+      { id: employee._id, userName: employee.userName, role: 'employee' },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      message: 'Employee login successful',
+      token,
+      user: { id: employee._id, userName: employee.userName, role: 'employee' },
+    });
+  } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
@@ -122,6 +157,18 @@ export const updateEmployee = async (req, res) => {
     );
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
     res.json({ message: 'Employee updated', employee });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const validateEmployeeToken = async (req, res) => {
+  try {
+    const user = await Employee.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+    res.json({ user: { id: user._id, userName: user.userName, role: 'employee' } });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

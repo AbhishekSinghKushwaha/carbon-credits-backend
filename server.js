@@ -5,6 +5,7 @@ import cors from 'cors';
 import employeeRoutes from './routes/employeeRoutes.js';
 import employerRoutes from './routes/employerRoutes.js';
 import creditRoutes from './routes/creditRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use('/api/employees', employeeRoutes);
 app.use('/api/employers', employerRoutes);
 app.use('/api/credits', creditRoutes);
+app.use('/api/admin', adminRoutes);
 
 const PORT = process.env.PORT || 5000;
 
