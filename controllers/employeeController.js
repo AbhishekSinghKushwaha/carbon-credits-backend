@@ -145,18 +145,86 @@ export const getEmployeebyId = async (req, res) => {
   }
 };
 
+// export const updateEmployee = async (req, res) => {
+//   const { id } = req.params;
+//   const { homeLocation, workLocation } = req.body;
+
+//   try {
+//     const employee = await Employee.findByIdAndUpdate(
+//       id,
+//       { homeLocation, workLocation },
+//       { new: true }
+//     );
+//     if (!employee) return res.status(404).json({ error: 'Employee not found' });
+//     res.json({ message: 'Employee updated', employee });
+//   } catch (error) {
+//     res.status(400).json({ error: error.message });
+//   }
+// };
+
+
 export const updateEmployee = async (req, res) => {
-  const { id } = req.params;
-  const { homeLocation, workLocation } = req.body;
+  const { employeeId } = req.params;
+  const { homeLocation, workLocation, distance, travelTime } = req.body;
+
+  if (!employeeId || !homeLocation || !workLocation || distance == null || travelTime == null) {
+    return res.status(400).json({ error: 'Employee ID, homeLocation, workLocation, distance, and travelTime are required' });
+  }
 
   try {
     const employee = await Employee.findByIdAndUpdate(
-      id,
-      { homeLocation, workLocation },
+      employeeId,
+      { homeLocation, workLocation, distance, travelTime },
       { new: true }
     );
-    if (!employee) return res.status(404).json({ error: 'Employee not found' });
-    res.json({ message: 'Employee updated', employee });
+
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    res.json({ message: 'Employee updated successfully', employee });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+export const trackCarbonCredits = async (req, res) => {
+  const { employeeId } = req.params;
+  const { mode } = req.body;
+
+  if (!employeeId || !mode) {
+    return res.status(400).json({ error: 'Employee ID and transportation mode are required' });
+  }
+
+  try {
+    const employee = await Employee.findById(employeeId);
+    if (!employee) {
+      return res.status(404).json({ error: 'Employee not found' });
+    }
+
+    // Define credits based on transportation mode
+    const creditsMap = {
+      'Public Transport': 10,
+      'Bicycle': 15,
+      'Walking': 20,
+      'Carpool': 8,
+      'Electric Vehicle': 5,
+      'Car': 0,
+    };
+
+    const creditsEarned = creditsMap[mode] || 0;
+
+    // Update employee's credits and add to transportation history
+    employee.credits += creditsEarned;
+    employee.transportationHistory.push({
+      mode,
+      creditsEarned,
+      date: new Date(),
+    });
+
+    await employee.save();
+
+    res.json({ message: `Earned ${creditsEarned} credits for using ${mode}`, employee });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
