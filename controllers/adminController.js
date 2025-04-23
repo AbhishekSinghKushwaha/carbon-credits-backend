@@ -112,3 +112,7 @@ export const approveEmployer = async (req, res) => {
       res.status(400).json({ error: error.message });
     }
   };
+
+  export const testEndpoint = (req, res) => {
+    res.json({ message: 'Backend is running successfully! 🚀' });
+  };
