@@ -196,3 +196,27 @@ export const validateEmployerToken = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
+export const buyCredits = async (req, res) => {
+  const { userName, credits } = req.body;
+
+  if (!userName || !credits || credits <= 0) {
+    return res.status(400).json({ error: 'Invalid request: userName and credits are required, and credits must be positive' });
+  }
+
+  try {
+    const employer = await Employer.findOne({ userName });
+    if (!employer) {
+      return res.status(404).json({ error: 'Employer not found' });
+    }
+
+    // Simulate buying credits from a central pool (e.g., the system)
+    // In a real system, you might deduct from a central pool or involve payment
+    employer.credits += credits;
+    await employer.save();
+
+    res.json({ message: `Successfully bought ${credits} credits`, employer });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};

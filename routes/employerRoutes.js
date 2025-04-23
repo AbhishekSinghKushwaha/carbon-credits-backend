@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerEmployer, loginEmployer, getEmployer, tradeCredits, getAllEmployers, getEmployerbyId, validateEmployerToken } from '../controllers/employerController.js';
+import { registerEmployer, loginEmployer, getEmployer, tradeCredits, getAllEmployers, getEmployerbyId, validateEmployerToken, buyCredits } from '../controllers/employerController.js';
 import { authenticateToken } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -13,5 +13,7 @@ router.get('/get/:id', getEmployerbyId); // Get employer details and employees
 // router.post('/trade', tradeCredits); // Trade credits between employers
 router.get('/', getAllEmployers);
 router.get('/validate', authenticateToken, validateEmployerToken);
+router.post('/buy', buyCredits); // New route for buying credits
+
 
 export default router;

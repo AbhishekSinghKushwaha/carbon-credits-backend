@@ -7,8 +7,44 @@ import jwt from 'jsonwebtoken';
 // Number of salt rounds for bcrypt hashing
 const SALT_ROUNDS = 10;
 
+// export const registerEmployee = async (req, res) => {
+//   const { name, userName, email, password, employerUserName, homeLocation, workLocation, distance, travelTime } = req.body;
+
+//   if (!name || !userName || !email || !password || !employerUserName || !homeLocation || !workLocation) {
+//     return res.status(400).json({ error: 'All fields are required' });
+//   }
+
+//   try {
+//     const existingEmployee = await Employee.findOne({ $or: [{ userName }, { email }] });
+//     if (existingEmployee) {
+//       return res.status(400).json({ error: 'Username or email already exists' });
+//     }
+
+//     const employer = await Employer.findOne({ userName: employerUserName });
+//     if (!employer) {
+//       return res.status(400).json({ error: 'Employer not found' });
+//     }
+
+//     const employee = new Employee({
+//       name,
+//       userName,
+//       email,
+//       password,
+//       employerUserName,
+//       homeLocation,
+//       workLocation,
+//       distance: distance || 0,
+//       travelTime: travelTime || 0,
+//     });
+
+//     await employee.save();
+//     res.status(201).json({ message: 'Employee registered successfully', employeeId: employee._id });
+//   } catch (error) {
+//     res.status(400).json({ error: error.message });
+//   }
+// };
 export const registerEmployee = async (req, res) => {
-  const { name, userName, email, password, employerUserName, homeLocation, workLocation } = req?.body;
+ const { name, userName, email, password, employerUserName, homeLocation, workLocation, distance, travelTime } = req.body;
 
   // Validate request body
   if (!name || !userName || !email || !password || !employerUserName || !homeLocation || !workLocation) {
@@ -46,6 +82,8 @@ export const registerEmployee = async (req, res) => {
       employerUserName, // Store the employer's userName
       homeLocation,
       workLocation,
+      distance: distance || 0,
+      travelTime: travelTime || 0,
     });
 
     // Save the employee to the database
@@ -202,6 +240,9 @@ export const trackCarbonCredits = async (req, res) => {
       return res.status(404).json({ error: 'Employee not found' });
     }
 
+    const employer = await Employer.findOne({ userName: employee.employerUserName });
+    if (!employer) return res.status(404).json({ error: 'Employer not found' });
+
     // Define credits based on transportation mode
     const creditsMap = {
       'Public Transport': 10,
@@ -221,14 +262,98 @@ export const trackCarbonCredits = async (req, res) => {
       creditsEarned,
       date: new Date(),
     });
+    employer.credits += creditsEarned;
 
     await employee.save();
+    await employer.save();
 
     res.json({ message: `Earned ${creditsEarned} credits for using ${mode}`, employee });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 };
+
+// export const trackCarbonCredits = async (req, res) => {
+//   const { employeeId } = req.params;
+//   const { mode } = req.body;
+
+//   try {
+//     const employee = await Employee.findById(employeeId);
+//     if (!employee) {
+//       return res.status(404).json({ error: 'Employee not found' });
+//     }
+
+//     const employer = await Employer.findOne({ userName: employee.employerUserName });
+//     if (!employer) {
+//       return res.status(404).json({ error: 'Employer not found' });
+//     }
+
+//     // Check if credits were already updated today
+//     const now = new Date();
+//     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+//     if (employee.lastCreditUpdate) {
+//       const lastUpdate = new Date(employee.lastCreditUpdate);
+//       const lastUpdateDate = new Date(lastUpdate.getFullYear(), lastUpdate.getMonth(), lastUpdate.getDate());
+//       if (lastUpdateDate.getTime() === today.getTime()) {
+//         return res.status(400).json({ error: 'Credits can only be updated once per day' });
+//       }
+//     }
+
+//     // Calculate credits earned based on transport mode (daily commute)
+//     let creditsEarned = 0;
+//     const distance = employee.distance || 0;
+//     switch (mode) {
+//       case 'Public Transport':
+//         creditsEarned = distance * 0.5;
+//         break;
+//       case 'Bicycle':
+//         creditsEarned = distance * 1.0;
+//         break;
+//       case 'Walking':
+//         creditsEarned = distance * 1.5;
+//         break;
+//       case 'Carpool':
+//         creditsEarned = distance * 0.7;
+//         break;
+//       case 'Electric Vehicle':
+//         creditsEarned = distance * 0.3;
+//         break;
+//       case 'Car':
+//         creditsEarned = 0;
+//         break;
+//       default:
+//         return res.status(400).json({ error: 'Invalid transport mode' });
+//     }
+
+//     // Calculate additional miles driven per day (normalized from monthly 1,000 miles)
+//     const workDaysPerMonth = 20;
+//     const totalMonthlyMiles = 1000;
+//     const dailyNonWorkMiles = (totalMonthlyMiles - (distance * workDaysPerMonth)) / workDaysPerMonth;
+//     const additionalMiles = Math.max(0, dailyNonWorkMiles); // Daily additional miles
+
+//     // Deduct credits for additional miles (1 mile = 1 credit)
+//     const creditsDeducted = additionalMiles;
+
+//     // Update credits (ensure they don't go below 0)
+//     const previousCredits = employee.credits || 0;
+//     const newCredits = Math.max(0, previousCredits + creditsEarned - creditsDeducted);
+//     employee.credits = newCredits;
+//     employee.lastCreditUpdate = now; // Update the last credit update timestamp
+//     await employee.save();
+
+//     // Update employer's credits (also prevent going below 0)
+//     const employerPreviousCredits = employer.credits || 0;
+//     employer.credits = Math.max(0, employerPreviousCredits + creditsEarned - creditsDeducted);
+//     await employer.save();
+
+//     res.json({
+//       message: `Credits updated: ${creditsEarned.toFixed(2)} earned, ${creditsDeducted.toFixed(2)} deducted for additional ${additionalMiles.toFixed(2)} miles driven`,
+//       employee,
+//     });
+//   } catch (error) {
+//     res.status(400).json({ error: error.message });
+//   }
+// };
 
 export const validateEmployeeToken = async (req, res) => {
   try {

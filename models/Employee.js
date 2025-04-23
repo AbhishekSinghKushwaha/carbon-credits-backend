@@ -35,8 +35,9 @@ const employeeSchema = new mongoose.Schema({
       creditsEarned: { type: Number, required: true },
       date: { type: Date, default: Date.now },
     },
-  ], // New field to track transportation history
+  ],
   createdAt: { type: Date, default: Date.now },
+  lastCreditUpdate: { type: Date }
 });
 
 export default mongoose.model('Employee', employeeSchema);
