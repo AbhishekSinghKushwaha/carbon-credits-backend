@@ -178,7 +178,7 @@ export const tradeCredits = async (req, res) => {
 
 export const getAllEmployers = async (req, res) => {
   try {
-    const employers = await Employer.find({}, 'userName name bankApproved'); // Only return userName and name
+    const employers = await Employer.find({}, 'userName name bankApproved credits');
     res.json(employers);
   } catch (error) {
     res.status(400).json({ error: error.message });

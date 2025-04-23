@@ -357,7 +357,7 @@ export const trackCarbonCredits = async (req, res) => {
 
 export const validateEmployeeToken = async (req, res) => {
   try {
-    const user = await Employee.findById(req.user.id);
+    const user = await Employee.findOne({ userName: req.user.userName });
     if (!user) {
       return res.status(404).json({ error: 'Employee not found' });
     }
