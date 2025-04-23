@@ -13,6 +13,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+app.get('/', (req, res) => {
+  res.send("Backend running successfully")
+})
+
 app.use('/api/employees', employeeRoutes);
 app.use('/api/employers', employerRoutes);
 app.use('/api/credits', creditRoutes);
